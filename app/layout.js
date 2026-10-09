@@ -1,6 +1,7 @@
 import './globals.css'
 import Header from '../components/Header'
 import AgeGate from '../components/AgeGate'
+import Footer from '../components/Footer'
 
 export const metadata = {
   title: 'Smoke Shop Accessories',
@@ -23,7 +24,7 @@ export default function RootLayout({ children }) {
         </div></div>
         <Header />
         <main className="w">{children}</main>
-        <footer>Smoke Shop Accessories · You must be 21 or older to use this site.</footer>
+        <Footer />
       </body>
     </html>
   )

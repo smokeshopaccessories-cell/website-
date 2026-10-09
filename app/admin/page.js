@@ -9,8 +9,9 @@ import PriceRequests from '../../components/admin/PriceRequests'
 import Deals from '../../components/admin/Deals'
 import Customers from '../../components/admin/Customers'
 import Settings from '../../components/admin/Settings'
+import Banners from '../../components/admin/Banners'
 
-const TABS = [['products', 'Inventory', Products], ['wholesale', 'Wholesale requests', Wholesale], ['requests', 'Price requests', PriceRequests], ['deals', 'Deals', Deals], ['orders', 'Orders', Orders], ['customers', 'Customers', Customers], ['settings', 'Shipping', Settings]]
+const TABS = [['products', 'Inventory', Products], ['wholesale', 'Wholesale requests', Wholesale], ['requests', 'Price requests', PriceRequests], ['deals', 'Deals', Deals], ['orders', 'Orders', Orders], ['customers', 'Customers', Customers], ['banners', 'Banners & brands', Banners], ['settings', 'Shipping', Settings]]
 
 export default function Admin() {
   const { user, profile, loading } = useAuth()

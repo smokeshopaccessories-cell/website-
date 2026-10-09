@@ -33,10 +33,7 @@ export default function Header() {
   return (
     <header>
       <div className="top">
-        <Link href="/" className="brand" aria-label="Smoke Shop Accessories home">
-          <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="14" fill="#9ad8a6" /><path d="M12 35c0-13 9-21 24-21 0 14-8 22-20 22-2 0-4 0-4-1zm4-2c5-8 10-12 16-15-6 5-10 9-13 16z" fill="#fff" opacity=".92" /></svg>
-          <span className="bn">Smoke Shop<br />Accessories</span>
-        </Link>
+        <Link href="/" aria-label="Smoke Shop Accessories home"><img className="logo" src="/logo.png" alt="Smoke Shop Accessories" /></Link>
         <form className="search" onSubmit={(e) => { e.preventDefault(); if (q.trim()) router.push('/search?q=' + encodeURIComponent(q.trim())) }}>
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, brand or UPC" aria-label="Search" />
         </form>
@@ -49,13 +46,14 @@ export default function Header() {
         ) : (
           <>
             <Link className="btn" href="/login">Log in</Link>
-            <Link className="btn f" href="/signup">Sign up</Link>
+            <Link className="btn" href="/signup">Sign up</Link>
           </>
         )}
         <Link className="btn f" href="/cart">Order request ({n})</Link>
       </div>
-      <nav className="cats" aria-label="Categories">
+      <nav className="bar" aria-label="Categories">
         <ul>
+          <li className="hot"><Link href="/#deals">Deals</Link></li>
           {cats.map((c) => (
             <li key={c.id} onMouseEnter={() => loadBrands(c.id)} onFocus={() => loadBrands(c.id)}>
               <Link href={'/category/' + c.id}>{c.name} ▾</Link>

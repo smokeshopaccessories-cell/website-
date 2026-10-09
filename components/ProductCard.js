@@ -7,6 +7,7 @@ import { addToCart, money } from '../lib/cart'
 export default function ProductCard({ p, user, profile }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [qv, setQv] = useState(false)
   const [ask, setAsk] = useState('')
   const [note, setNote] = useState('')
   const [msg, setMsg] = useState('')
@@ -19,6 +20,9 @@ export default function ProductCard({ p, user, profile }) {
   else if (p.price != null) price = <span>{money(p.price)}</span>
   else price = <span className="lk">{pending ? 'Pending approval' : 'Log in to see price'}</span>
 
+  const order = () => { if (!user) router.push('/login'); else { addToCart(p); setQv(false) } }
+  const label = sold ? 'Sold' : !user ? 'Log in to order' : 'Add to order request'
+
   async function send() {
     const v = parseFloat(ask)
     if (!v) { setMsg('Enter the price you were offered.'); return }
@@ -29,16 +33,34 @@ export default function ProductCard({ p, user, profile }) {
 
   return (
     <div className="pr">
-      {p.on_deal && !sold && <span className="bd d">Deal</span>}
-      {!p.on_deal && p.status === 'low' && <span className="bd l">Low stock</span>}
-      <div className="im">{p.image_url ? <img src={p.image_url} alt={p.name} loading="lazy" /> : <span>{p.brand || 'Photo'}</span>}</div>
+      {p.on_deal && !sold && <span className="bd d">DEAL</span>}
+      {!p.on_deal && p.status === 'low' && <span className="bd l">LOW STOCK</span>}
+      <button className="im" onClick={() => setQv(true)} aria-label={'Quick view ' + p.name}>
+        {p.image_url ? <img src={p.image_url} alt={p.name} loading="lazy" /> : <span>{p.brand || 'Photo'}</span>}
+        <span className="qv">Quick View</span>
+      </button>
       <b>{p.name}</b>
       <small>{p.description}</small>
       <div className="p">{price}</div>
-      <button className="add" disabled={sold} onClick={() => { if (!user) router.push('/login'); else addToCart(p) }}>
-        {sold ? 'Sold' : !user ? 'Log in to order' : 'Add to order request'}
-      </button>
+      <button className="add" disabled={sold} onClick={order}>{label}</button>
       {canAsk && <button className="rq" onClick={() => { setOpen(true); setMsg('') }}>Request a better price</button>}
+
+      {qv && (
+        <div className="ov c" onClick={(e) => { if (e.target === e.currentTarget) setQv(false) }}>
+          <div className="md big" role="dialog" aria-modal="true" aria-label={p.name}>
+            <div className="qvg">
+              {p.image_url ? <img src={p.image_url} alt={p.name} /> : <div className="ph0">No photo yet</div>}
+              <div>
+                <h2>{p.name}</h2>
+                {p.brand && <p className="mute">Brand: {p.brand}</p>}
+                <p>{p.description}</p>
+                <div className="p" style={{ font: '700 26px Fraunces,serif', margin: '12px 0' }}>{price}</div>
+                <div className="row"><button className="btn f" disabled={sold} onClick={order}>{label}</button><button className="btn" onClick={() => setQv(false)}>Close</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {open && (
         <div className="ov c" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}>
           <div className="md" role="dialog" aria-modal="true" aria-label="Request a better price">
