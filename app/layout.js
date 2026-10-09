@@ -2,6 +2,7 @@ import './globals.css'
 import Header from '../components/Header'
 import AgeGate from '../components/AgeGate'
 import Footer from '../components/Footer'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata = {
   title: 'Smoke Shop Accessories',
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
         <Header />
         <main className="w">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   )
