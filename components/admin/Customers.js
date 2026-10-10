@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { adminMessage } from '../../lib/support'
 
 export default function Customers() {
   const [rows, setRows] = useState([])
@@ -13,7 +14,7 @@ export default function Customers() {
   const shown = rows.filter((r) => !q || (r.full_name + ' ' + r.business_name + ' ' + r.email + ' ' + r.phone).toLowerCase().includes(q.toLowerCase()))
   async function send() {
     if (!text.trim()) return
-    const { error } = await supabase.from('messages').insert({ customer_id: to.id, sender: 'admin', body: text })
+    const { error } = await adminMessage(to.id, 'other', 'Message from the store', text.trim())
     setMsg(error ? error.message : 'Message sent to their account.'); if (!error) { setText(''); setTo(null) }
   }
   return (

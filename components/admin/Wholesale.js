@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { adminMessage } from '../../lib/support'
 
 export default function Wholesale() {
   const [rows, setRows] = useState([])
@@ -12,6 +13,7 @@ export default function Wholesale() {
   useEffect(() => { load() }, [])
   async function setStatus(id, status) {
     const { error } = await supabase.from('profiles').update({ status }).eq('id', id)
+    if (!error && status === 'approved') await adminMessage(id, 'account', 'Wholesale account', 'Good news! Your wholesale account is approved. You can now see your wholesale prices and send order requests.')
     setMsg(error ? error.message : 'Updated to ' + status + '.'); load()
   }
   async function setAdj(id, v) {

@@ -4,6 +4,8 @@ import { useParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/useAuth'
 import ProductCard from '../../../components/ProductCard'
+import BannerSlider from '../../../components/BannerSlider'
+import Showcase from '../../../components/Showcase'
 
 const PS = 48
 
@@ -34,7 +36,9 @@ export default function Category() {
   return (
     <>
       <div className="ph"><h1>{name || 'Category'}</h1></div>
-      <div className="chips">
+      <BannerSlider categoryId={cid} />
+      <Showcase categoryId={cid} title={name} />
+      <div className="chips" style={{ marginTop: 26 }}>
         <button className={!brand ? 'on' : ''} onClick={() => setBrand('')}>All brands</button>
         {brands.map((b) => <button key={b.brand} className={brand === b.brand ? 'on' : ''} onClick={() => setBrand(b.brand)}>{b.brand}</button>)}
       </div>

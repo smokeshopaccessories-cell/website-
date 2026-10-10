@@ -29,7 +29,7 @@ export default function Footer() {
           <h3>Customer support</h3>
           <Link className="fl" href="/policy/privacy">Privacy Policy</Link>
           <Link className="fl" href="/policy/terms">Terms &amp; Conditions</Link>
-          <Link className="fl" href="/policy/returns">Product Returns</Link>
+          <Link className="fl" href="/policy/returns">No Returns</Link>
           <Link className="fl" href="/policy/disclaimer">Disclaimer</Link>
           <Link className="fl" href="/signup?type=wholesale">Wholesale accounts</Link>
         </div>

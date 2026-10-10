@@ -16,6 +16,7 @@ export default function Header() {
   const [sug, setSug] = useState([])
   const [showSug, setShowSug] = useState(false)
   const box = useRef(null)
+  const [badge, setBadge] = useState(0)
 
   useEffect(() => {
     supabase.from('categories').select('id,name').eq('visible', true).order('sort').then(({ data }) => setCats(data || []))
@@ -35,6 +36,22 @@ export default function Header() {
     }, 250)
     return () => clearTimeout(id)
   }, [q, user?.id])
+  useEffect(() => {
+    if (!user || !profile) { setBadge(0); return }
+    const f = async () => {
+      let a, b
+      if (profile.role === 'admin') {
+        a = await supabase.from('support_threads').select('id', { count: 'exact', head: true }).eq('admin_unread', true).eq('status', 'open')
+        b = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'requested')
+      } else {
+        a = await supabase.from('support_threads').select('id', { count: 'exact', head: true }).eq('customer_id', user.id).eq('customer_unread', true)
+        b = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('customer_id', user.id).eq('status', 'quoted')
+      }
+      setBadge((a.count || 0) + (b.count || 0))
+    }
+    f(); const t = setInterval(f, 45000)
+    return () => clearInterval(t)
+  }, [user?.id, profile?.role])
   useEffect(() => {
     const close = (e) => { if (box.current && !box.current.contains(e.target)) setShowSug(false) }
     document.addEventListener('mousedown', close)
@@ -73,8 +90,8 @@ export default function Header() {
         </div>
         {user ? (
           <>
-            {profile?.role === 'admin' && <Link className="btn" href="/admin">Admin</Link>}
-            <Link className="btn" href="/account">My account</Link>
+            {profile?.role === 'admin' && <Link className="btn f" href="/admin">Admin{badge ? ' (' + badge + ')' : ''}</Link>}
+            <Link className="btn" href="/account">My account{profile?.role !== 'admin' && badge ? ' (' + badge + ')' : ''}</Link>
             <button className="btn" onClick={async () => { await supabase.auth.signOut(); router.push('/') }}>Log out</button>
           </>
         ) : (

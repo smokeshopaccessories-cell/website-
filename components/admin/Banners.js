@@ -18,12 +18,16 @@ export default function Banners() {
   const [title, setTitle] = useState('')
   const [brand, setBrand] = useState('')
   const [msg, setMsg] = useState('')
+  const [cats, setCats] = useState([])
+  const [target, setTarget] = useState('')
   const bref = useRef(null)
   const lref = useRef(null)
 
   const load = async () => {
     const b = await supabase.from('banners').select('*').order('sort').order('id')
     setBanners(b.data || [])
+    const c = await supabase.from('categories').select('id,name').order('sort')
+    setCats(c.data || [])
     const l = await supabase.from('brand_logos').select('*').order('brand')
     setLogos(l.data || [])
   }
@@ -32,7 +36,7 @@ export default function Banners() {
   async function addBanner(file) {
     const r = await upload(file, 'banners')
     if (r.error) { setMsg(r.error); return }
-    const { error } = await supabase.from('banners').insert({ image_url: r.url, link: link || null, title: title || null, sort: banners.length })
+    const { error } = await supabase.from('banners').insert({ image_url: r.url, link: link || null, title: title || null, sort: banners.length, category_id: target ? Number(target) : null })
     setMsg(error ? error.message : 'Banner added.'); if (!error) { setLink(''); setTitle(''); load() }
   }
   async function addLogo(file) {
@@ -48,9 +52,10 @@ export default function Banners() {
     <>
       {msg && <p className="note">{msg}</p>}
       <div className="cd">
-        <h3>Home page banners</h3>
-        <p className="mute">Wide images (about 1600 × 600). They slide automatically on the home page. If you add none, a default banner is shown.</p>
+        <h3>Banners</h3>
+        <p className="mute">Wide images (about 1600 × 600). Choose the home page or a category page. They slide automatically. Every category page also shows an automatic scrolling strip of its products.</p>
         <div className="fm">
+          <div><label htmlFor="bc">Where to show it</label><select id="bc" value={target} onChange={(e) => setTarget(e.target.value)}><option value="">Home page</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name} page</option>)}</select></div>
           <div><label htmlFor="bt">Title (for accessibility)</label><input id="bt" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div><label htmlFor="bl">Link when clicked (optional, for example /category/1)</label><input id="bl" value={link} onChange={(e) => setLink(e.target.value)} /></div>
           <button className="btn f" onClick={() => bref.current.click()}>Choose banner image</button>
@@ -61,7 +66,7 @@ export default function Banners() {
         <div className="cd" key={b.id}>
           <div className="fm">
             <img src={b.image_url} alt="" style={{ width: 200, borderRadius: 8 }} />
-            <div style={{ flex: 2 }}><b>{b.title || 'Untitled'}</b><br /><small>{b.link || 'No link'}</small></div>
+            <div style={{ flex: 2 }}><b>{b.title || 'Untitled'}</b><br /><small>{(b.category_id ? (cats.find((c) => c.id === b.category_id)?.name || 'Category') + ' page' : 'Home page')} · {b.link || 'No link'}</small></div>
             <div style={{ maxWidth: 90 }}><label>Order</label><input type="number" defaultValue={b.sort} onBlur={(e) => upd(b.id, { sort: Number(e.target.value) || 0 })} /></div>
             <button className="btn" onClick={() => upd(b.id, { active: !b.active })}>{b.active ? 'Hide' : 'Show'}</button>
             <button className="btn d" onClick={async () => { if (confirm('Delete this banner?')) { await supabase.from('banners').delete().eq('id', b.id); load() } }}>Delete</button>

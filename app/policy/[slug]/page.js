@@ -12,8 +12,8 @@ const POLICIES = {
   terms: {
     title: 'Terms & Conditions',
     body: [
-      'You must be 21 or older to use this website or buy from us. We may ask for proof of age at any time.',
-      'This website takes order requests only. No payment is taken online. After you submit a request, our team confirms availability, adds the UPS shipping total, and contacts you to arrange payment.',
+      'You must be 21 or older to use this website or buy from us. We may ask for proof of age at any time. Shipped orders require an adult (21+) signature and ID at delivery, and pickup orders require photo ID at the store.',
+      'This website takes order requests only. There is no instant checkout and no payment is taken online. After you send a request, our team confirms availability and sends you your final prices and, for shipped orders, the UPS shipping total. You can accept or decline the quote. Payment is arranged directly with the store.',
       'Prices and availability can change. Wholesale prices are shown only to approved wholesale customers and are for resale by licensed businesses. We may refuse or cancel any order request.',
     ],
   },
@@ -27,10 +27,10 @@ const POLICIES = {
     ],
   },
   returns: {
-    title: 'Product Returns',
+    title: 'No Returns',
     body: [
-      'If there is a problem with your order, please contact the store as soon as you receive it so we can help.',
-      'Details such as the return period and which items can be returned are set by the store. Please add your policy here.',
+      'All sales are final. We do not accept returns. We inspect every product before it ships or is handed to you, so please check your order when you receive it.',
+      'If something is wrong with your order, such as a missing item, contact the store right away so we can look into it.',
     ],
   },
 }

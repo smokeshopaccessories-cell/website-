@@ -3,27 +3,31 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function BannerSlider() {
+export default function BannerSlider({ categoryId = null }) {
   const [items, setItems] = useState(null)
   const [i, setI] = useState(0)
 
   useEffect(() => {
-    supabase.from('banners').select('*').eq('active', true).order('sort').order('id').then(({ data }) => setItems(data || []))
-  }, [])
+    setItems(null); setI(0)
+    let q = supabase.from('banners').select('*').eq('active', true)
+    q = categoryId ? q.eq('category_id', categoryId) : q.is('category_id', null)
+    q.order('sort').order('id').then(({ data }) => setItems(data || []))
+  }, [categoryId])
   const n = items ? Math.max(items.length, 1) : 1
   useEffect(() => {
     if (n < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const t = setInterval(() => setI((x) => (x + 1) % n), 5500)
     return () => clearInterval(t)
   }, [n])
-  if (items === null) return <div className="ban" style={{ aspectRatio: '16/6' }} />
+  if (items === null) return categoryId ? null : <div className="ban" style={{ aspectRatio: '16/6' }} />
+  if (categoryId && items.length === 0) return null
 
   const fallback = (
     <div className="hero">
       <div className="hl">
         <span className="stk">21+ ONLY</span>
         <h1>Stock your shelf with <mark>the good stuff.</mark></h1>
-        <p>Papers, glass, vapes, hookah and more. Browse, send an order request, and we confirm your total with UPS shipping and arrange payment with you.</p>
+        <p>Papers, glass, vapes, hookah and more. Browse, send an order request, and we confirm your final prices and shipping total before anything is paid.</p>
         <div className="row"><Link className="btn f" href="/signup">Create account</Link><Link className="btn" href="/signup?type=wholesale">Apply for wholesale</Link></div>
       </div>
       <div className="hr" aria-hidden="true"><b>Papers</b><b>Glass</b><b>Vapes</b><b>Hookah</b><b>Scales</b></div>
