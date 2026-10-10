@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import Import from './Import'
 
 const PS = 30
 const blank = { name: '', description: '', category_id: '', brand: '', retail_price: 0, wholesale_price: 0, cost: '', upc: '', qty: 0, hidden: false, mark_sold: false, image_url: '' }
@@ -28,20 +29,27 @@ export default function Products() {
   const [link, setLink] = useState('')
   const fileRef = useRef(null)
   const bulkRef = useRef(null)
+  const [sel, setSel] = useState({})
+  const [importOpen, setImportOpen] = useState(false)
+  const [bulkCat, setBulkCat] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async () => {
-    let query = supabase.from('products').select('*', { count: 'exact' }).order('item_number').range(page * PS, page * PS + PS - 1)
+  const build = (select, opts) => {
+    let query = supabase.from('products').select(select, opts)
     const s = q.trim().replace(/[%,()*]/g, '')
     if (s) query = query.or('name.ilike.%' + s + '%,description.ilike.%' + s + '%,upc.eq.' + s + (/^\d+$/.test(s) && s.length < 9 ? ',item_number.eq.' + s : ''))
     if (cat) query = query.eq('category_id', cat)
     if (flt === 'problem') query = query.eq('price_problem', true)
     if (flt === 'sold') query = query.or('mark_sold.eq.true,qty.lte.0')
     if (flt === 'hidden') query = query.eq('hidden', true)
-    const { data, count } = await query
+    return query
+  }
+  const load = useCallback(async () => {
+    const { data, count } = await build('*', { count: 'exact' }).order('item_number').range(page * PS, page * PS + PS - 1)
     setRows(data || []); setTotal(count || 0)
   }, [q, cat, flt, page])
   useEffect(() => { load() }, [load])
-  useEffect(() => { supabase.from('categories').select('id,name').order('sort').then(({ data }) => setCats(data || [])) }, [])
+  useEffect(() => { supabase.from('categories').select('id,name,visible').order('sort').then(({ data }) => setCats(data || [])) }, [])
 
   const catName = (id) => cats.find((c) => c.id === id)?.name || ''
   const status = (p) => (p.hidden ? ['Hidden', 'w'] : p.mark_sold || p.price_problem || p.qty <= 0 ? ['Sold', 'b'] : p.qty <= 5 ? ['Low stock', 'w'] : ['In stock', ''])
@@ -91,6 +99,48 @@ export default function Products() {
     }
     setMsg('Matched ' + ok + ' of ' + arr.length + ' photos.' + (bad.length ? ' Not matched: ' + bad.slice(0, 8).join(', ') : '')); load()
   }
+  const ids = Object.keys(sel).filter((k) => sel[k]).map(Number)
+  const pageAll = rows.length > 0 && rows.every((r) => sel[r.id])
+  const toggle = (id) => setSel((s) => ({ ...s, [id]: !s[id] }))
+  const togglePage = () => setSel((s) => { const n = { ...s }; rows.forEach((r) => { n[r.id] = !pageAll }); return n })
+  async function selectAllMatching() {
+    setBusy(true); setMsg('')
+    const n = {}
+    for (let from = 0; from < Math.min(total, 5000); from += 1000) {
+      const { data } = await build('id').order('item_number').range(from, from + 999)
+      ;(data || []).forEach((r) => { n[r.id] = true })
+    }
+    setSel(n); setBusy(false)
+    if (total > 5000) setMsg('Selected the first 5,000 matching items.')
+  }
+  async function bulkUpdate(patch, label) {
+    if (!ids.length) return
+    setBusy(true); setMsg('')
+    for (let i = 0; i < ids.length; i += 150) {
+      const { error } = await supabase.from('products').update(patch).in('id', ids.slice(i, i + 150))
+      if (error) { setMsg(error.message); setBusy(false); return }
+    }
+    setBusy(false); setMsg(label + ' for ' + ids.length + ' products.'); setSel({}); load()
+  }
+  async function bulkDelete() {
+    if (!ids.length) return
+    if (!confirm('Delete ' + ids.length + ' products permanently? This cannot be undone. (Hiding them instead keeps them safe.)')) return
+    setBusy(true); setMsg('')
+    let deleted = 0
+    const blocked = []
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100)
+      const { error } = await supabase.from('products').delete().in('id', chunk)
+      if (!error) { deleted += chunk.length; continue }
+      for (const id of chunk) {
+        const r = await supabase.from('products').delete().eq('id', id)
+        if (r.error) blocked.push(id); else deleted++
+      }
+    }
+    setBusy(false); setSel({})
+    setMsg('Deleted ' + deleted + ' products.' + (blocked.length ? ' ' + blocked.length + ' could not be deleted because they are in past orders. Hide them instead.' : ''))
+    load()
+  }
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
 
   return (
@@ -99,18 +149,34 @@ export default function Products() {
         <div style={{ flex: 3 }}><input placeholder="Search name, item number or UPC" value={q} onChange={(e) => { setQ(e.target.value); setPage(0) }} aria-label="Search" /></div>
         <div><select value={cat} onChange={(e) => { setCat(e.target.value); setPage(0) }} aria-label="Category"><option value="">All categories</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
         <div><select value={flt} onChange={(e) => { setFlt(e.target.value); setPage(0) }} aria-label="Filter"><option value="">All items</option><option value="problem">Price problems</option><option value="sold">Sold or out of stock</option><option value="hidden">Hidden</option></select></div>
+        <button className="btn" onClick={() => setImportOpen(true)}>Import products</button>
         <button className="btn" onClick={() => bulkRef.current.click()}>Bulk photos</button>
         <button className="btn f" onClick={() => { setF({ ...blank }); setMsg('') }}>Add product</button>
         <input ref={bulkRef} type="file" multiple accept="image/*" hidden onChange={(e) => bulk(e.target.files)} />
       </div>
       <p className="mute">Bulk photos: name each file with the product's UPC or item number (for example 0008660007315.jpg). {total} products.</p>
       {msg && !f && <p className="note">{msg}</p>}
+      {ids.length > 0 && (
+        <div className="bulkbar" role="region" aria-label="Bulk actions">
+          <b>{ids.length} selected</b>
+          {ids.length < total && <button className="btn" disabled={busy} onClick={selectAllMatching}>Select all {total} matching</button>}
+          <select value={bulkCat} onChange={(e) => setBulkCat(e.target.value)} aria-label="New category" style={{ maxWidth: 230 }}><option value="">Change category to…</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <button className="btn" disabled={busy || !bulkCat} onClick={() => bulkUpdate({ category_id: Number(bulkCat) }, 'Category changed')}>Apply</button>
+          <button className="btn" disabled={busy} onClick={() => bulkUpdate({ hidden: true }, 'Hidden')}>Hide</button>
+          <button className="btn" disabled={busy} onClick={() => bulkUpdate({ hidden: false }, 'Shown')}>Show</button>
+          <button className="btn" disabled={busy} onClick={() => bulkUpdate({ mark_sold: true }, 'Marked sold')}>Mark sold</button>
+          <button className="btn" disabled={busy} onClick={() => bulkUpdate({ mark_sold: false }, 'Sold mark removed')}>Unmark sold</button>
+          <button className="btn d" disabled={busy} onClick={bulkDelete}>Delete</button>
+          <button className="btn" onClick={() => setSel({})}>Clear</button>
+        </div>
+      )}
       <div className="tw"><table>
-        <thead><tr><th>No.</th><th>Product</th><th>Category</th><th>Retail</th><th>Wholesale</th><th>Cost</th><th>Qty</th><th>Status</th><th /></tr></thead>
+        <thead><tr><th style={{ width: 34 }}><input type="checkbox" style={{ width: 18, height: 18 }} checked={pageAll} onChange={togglePage} aria-label="Select all on this page" /></th><th>No.</th><th>Product</th><th>Category</th><th>Retail</th><th>Wholesale</th><th>Cost</th><th>Qty</th><th>Status</th><th /></tr></thead>
         <tbody>{rows.map((p) => {
           const s = status(p)
           return (
-            <tr key={p.id}>
+            <tr key={p.id} className={sel[p.id] ? 'selrow' : ''}>
+              <td><input type="checkbox" style={{ width: 18, height: 18 }} checked={!!sel[p.id]} onChange={() => toggle(p.id)} aria-label={'Select ' + p.name} /></td>
               <td>{p.item_number}</td>
               <td><div className="row" style={{ margin: 0, flexWrap: 'nowrap' }}>{p.image_url ? <img className="th" src={p.image_url} alt="" /> : <span className="th" />}<span><b>{p.name}</b><br /><small>{p.description}{p.upc ? ' · ' + p.upc : ''}</small></span></div></td>
               <td>{catName(p.category_id)}</td><td>${Number(p.retail_price).toFixed(2)}</td><td>${Number(p.wholesale_price).toFixed(2)}</td><td>{p.cost != null ? '$' + Number(p.cost).toFixed(2) : '—'}</td><td>{p.qty}</td>
@@ -148,6 +214,7 @@ export default function Products() {
           </div>
         </div>
       )}
+      <Import open={importOpen} onClose={() => setImportOpen(false)} onDone={load} cats={cats} />
     </>
   )
 }

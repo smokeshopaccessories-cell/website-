@@ -64,8 +64,9 @@ export default function Support({ user }) {
       {!form && <div className="row" style={{ marginTop: 0 }}><button className="btn f" onClick={() => setForm({ topic: 'orders', subject: '', body: '' })}>Start a new chat</button></div>}
       {form && (
         <div>
+          <p className="mute"><small>To ask for a lower price on an item, use the price box next to that item in your order request.</small></p>
           <label htmlFor="ct">What do you need help with?</label>
-          <select id="ct" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })}>{Object.entries(TOPICS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+          <select id="ct" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })}>{Object.entries(TOPICS).filter(([k]) => k !== 'price').map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           <label htmlFor="cs">Subject</label><input id="cs" value={form.subject} maxLength={120} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
           <label htmlFor="cb">Message</label><textarea id="cb" rows="3" value={form.body} maxLength={4000} onChange={(e) => setForm({ ...form, body: e.target.value })} />
           {err && <p className="err">{err}</p>}

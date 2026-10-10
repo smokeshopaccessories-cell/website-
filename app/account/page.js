@@ -23,7 +23,7 @@ function Order({ o, reload }) {
   return (
     <div className="cd">
       <div className="ln"><b>Order #{o.id} · {new Date(o.created_at).toLocaleDateString()} · {ship ? 'Ship' : 'Pickup'}</b><span className={'tg ' + (o.status === 'quoted' ? 'w' : o.status === 'cancelled' ? 'b' : '')}>{LABEL[o.status]}</span></div>
-      {o.order_items.map((i, k) => <div className="ln" key={k}><span>{i.qty} × {i.products?.name}</span><span>{showTotal ? money(i.qty * i.unit_price) : ''}</span></div>)}
+      {o.order_items.map((i, k) => <div className="ln" key={k}><span>{i.qty} × {i.products?.name}{i.requested_price ? <><br /><small>You asked for {money(i.requested_price)} each{showTotal ? ' · Our price: ' + money(i.unit_price) + ' each' : ''}</small></> : null}</span><span>{showTotal ? money(i.qty * i.unit_price) : ''}</span></div>)}
       {o.status === 'requested' && <p className="note">We received your request. Our team will send your final prices{ship ? ' and shipping total' : ''} here. Nothing is charged yet.</p>}
       {showTotal && (
         <>
@@ -58,7 +58,7 @@ export default function Account() {
 
   async function load() {
     if (!user) return
-    const o = await supabase.from('orders').select('*, order_items(qty,unit_price,products(name))').eq('customer_id', user.id).order('id', { ascending: false })
+    const o = await supabase.from('orders').select('*, order_items(qty,unit_price,requested_price,customer_note,products(name))').eq('customer_id', user.id).order('id', { ascending: false })
     setOrders(o.data || [])
     const r = await supabase.from('price_requests').select('*, products(name)').eq('customer_id', user.id).order('id', { ascending: false })
     setReqs(r.data || [])

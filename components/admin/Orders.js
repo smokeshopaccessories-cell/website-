@@ -55,12 +55,14 @@ function Order({ o, reload }) {
 
   return (
     <div className="cd">
-      <div className="ln"><b>Order #{o.id} · {c.business_name || c.full_name} · {ship ? 'SHIP' : 'PICKUP'}</b><span className={'tg ' + (o.status === 'requested' ? 'w' : o.status === 'cancelled' ? 'b' : '')}>{o.status}</span></div>
+      <div className="ln"><b>Order #{o.id} · {c.business_name || c.full_name} · {ship ? 'SHIP' : 'PICKUP'}</b><span>{o.order_items.some((i) => i.requested_price) && <span className="tg w">Price ask</span>} <span className={'tg ' + (o.status === 'requested' ? 'w' : o.status === 'cancelled' ? 'b' : '')}>{o.status}</span></span></div>
       <p className="mute">{c.full_name} · {c.email} · {c.phone || ''} · {new Date(o.created_at).toLocaleString()}{ship ? ' · Address: ' + (o.address || '') : ''}</p>
       <p className="mute"><small>{o.age_ack ? '✓ Customer confirmed 21+, ID at delivery/pickup, and no returns' + (o.age_ack_at ? ' on ' + new Date(o.age_ack_at).toLocaleString() : '') : 'No age confirmation recorded'}</small></p>
       {o.order_items.map((i) => (
-        <div className="ln" key={i.id}>
-          <span>{i.qty} × #{i.products?.item_number} {i.products?.name}</span>
+        <div className={'ln' + (i.requested_price ? ' asked' : '')} key={i.id}>
+          <span>{i.qty} × #{i.products?.item_number} {i.products?.name}<br /><small>List price {money(i.list_price ?? i.unit_price)} each</small>
+            {i.requested_price ? <><br /><b className="askb">Customer asks for {money(i.requested_price)} each</b>{i.customer_note ? <span> · “{i.customer_note}”</span> : null} <button className="rq" onClick={() => setPrices({ ...prices, [i.id]: i.requested_price })}>Use their price</button></> : null}
+          </span>
           <span>$ <input style={{ width: 90, display: 'inline-block' }} type="number" step="0.01" value={prices[i.id]} onChange={(e) => setPrices({ ...prices, [i.id]: e.target.value })} aria-label="Final price each" disabled={['shipped', 'completed', 'cancelled'].includes(o.status)} /> each</span>
         </div>
       ))}
@@ -90,7 +92,7 @@ export default function Orders() {
   const [rows, setRows] = useState([])
   const [f, setF] = useState('requested')
   const load = async () => {
-    let q = supabase.from('orders').select('*, order_items(id,qty,unit_price,products(item_number,name)), profiles(full_name,business_name,email,phone)').order('id', { ascending: false }).limit(100)
+    let q = supabase.from('orders').select('*, order_items(id,qty,unit_price,list_price,requested_price,customer_note,products(item_number,name)), profiles(full_name,business_name,email,phone)').order('id', { ascending: false }).limit(100)
     if (f) q = q.eq('status', f)
     const { data } = await q
     setRows(data || [])
