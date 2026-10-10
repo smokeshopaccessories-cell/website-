@@ -30,7 +30,8 @@ export default function Wholesale() {
       {rows.map((r) => (
         <div className="cd" key={r.id}>
           <div className="ln"><b>{r.business_name || r.full_name} <span className={'tg ' + (r.status === 'approved' ? '' : r.status === 'rejected' ? 'b' : 'w')}>{r.status}</span></b><small>Applied {new Date(r.created_at).toLocaleDateString()}</small></div>
-          <p className="mute">{r.full_name} · {r.email} · {r.phone || 'no phone'} · {r.city || ''}</p>
+          <p className="mute">{r.full_name} · {r.email} · {r.phone || 'no phone'}</p>
+          <p><b>State:</b> {r.state || '—'} · <b>Tax ID:</b> {r.tax_id || '—'}</p>
           <div className="row" style={{ marginTop: 0 }}>
             <button className="btn" disabled={!r.license_path} onClick={() => view(r.license_path)}>{r.license_path ? 'View business license' : 'No license uploaded'}</button>
             <button className="btn" disabled={!r.resale_path} onClick={() => view(r.resale_path)}>{r.resale_path ? 'View resale certificate' : 'No certificate uploaded'}</button>

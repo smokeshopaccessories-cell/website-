@@ -20,9 +20,13 @@ export default function BannerSlider() {
 
   const fallback = (
     <div className="hero">
-      <h1>Everything for your smoke shop shelf, <i>in one place.</i></h1>
-      <p>Browse by category and request an order. We confirm your total, including UPS shipping, and arrange payment with you directly.</p>
-      <div className="row"><Link className="btn" href="/signup">Create account</Link><Link className="btn" href="/signup?type=wholesale">Apply for wholesale</Link></div>
+      <div className="hl">
+        <span className="stk">21+ ONLY</span>
+        <h1>Stock your shelf with <mark>the good stuff.</mark></h1>
+        <p>Papers, glass, vapes, hookah and more. Browse, send an order request, and we confirm your total with UPS shipping and arrange payment with you.</p>
+        <div className="row"><Link className="btn f" href="/signup">Create account</Link><Link className="btn" href="/signup?type=wholesale">Apply for wholesale</Link></div>
+      </div>
+      <div className="hr" aria-hidden="true"><b>Papers</b><b>Glass</b><b>Vapes</b><b>Hookah</b><b>Scales</b></div>
     </div>
   )
   return (
