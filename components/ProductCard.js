@@ -3,16 +3,19 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { addToCart, money } from '../lib/cart'
 import QuickView from './QuickView'
+import PriceLine from './PriceLine'
+import { useSavedPrices } from '../lib/quotes'
 
 export default function ProductCard({ p, user, profile }) {
   const router = useRouter()
   const [qv, setQv] = useState(false)
+  const saved = useSavedPrices(user)
   const sold = p.status === 'sold'
   const pending = user && profile && profile.status !== 'approved'
 
   let price
   if (sold) price = <span className="sold">Sold</span>
-  else if (p.price != null) price = <span>{money(p.price)}</span>
+  else if (p.price != null) price = <PriceLine p={p} saved={saved} />
   else price = <span className="lk">{pending ? 'Pending approval' : 'Log in to see price'}</span>
 
   const quick = () => { if (!user) router.push('/login'); else addToCart(p, 1) }

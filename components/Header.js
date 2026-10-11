@@ -39,15 +39,17 @@ export default function Header() {
   useEffect(() => {
     if (!user || !profile) { setBadge(0); return }
     const f = async () => {
-      let a, b
+      let a, b, c
       if (profile.role === 'admin') {
         a = await supabase.from('support_threads').select('id', { count: 'exact', head: true }).eq('admin_unread', true).eq('status', 'open')
         b = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'requested')
+        c = await supabase.from('quotes').select('id', { count: 'exact', head: true }).in('status', ['pending', 'declined'])
       } else {
         a = await supabase.from('support_threads').select('id', { count: 'exact', head: true }).eq('customer_id', user.id).eq('customer_unread', true)
         b = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('customer_id', user.id).eq('status', 'quoted')
+        c = await supabase.from('quotes').select('id', { count: 'exact', head: true }).eq('customer_id', user.id).in('status', ['countered', 'rejected'])
       }
-      setBadge((a.count || 0) + (b.count || 0))
+      setBadge((a.count || 0) + (b.count || 0) + (c.count || 0))
     }
     f(); const t = setInterval(f, 45000)
     return () => clearInterval(t)

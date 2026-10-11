@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { STATES } from '../../lib/states'
+import { checkFiles, uploadDocs } from '../../lib/docs'
+import DocPicker from '../../components/DocPicker'
 
 function age(dob) {
   const d = new Date(dob), n = new Date()
@@ -16,7 +18,7 @@ export default function Signup() {
   const router = useRouter()
   const [type, setType] = useState('retail')
   const [f, setF] = useState({ full_name: '', email: '', password: '', phone: '', dob: '', business_name: '', state: '', tax_id: '' })
-  const [permit, setPermit] = useState(null)
+  const [docs, setDocs] = useState([])
   const [ok21, setOk21] = useState(false)
   const [err, setErr] = useState('')
   const [done, setDone] = useState('')
@@ -35,7 +37,7 @@ export default function Signup() {
     if (ws && !f.business_name.trim()) { setErr('Store name is required.'); return }
     if (ws && !f.state) { setErr('Please choose the state your store is in.'); return }
     if (ws && !f.tax_id.trim()) { setErr('Tax ID number is required for wholesale.'); return }
-    if (permit && (!permit.type.startsWith('image/') || permit.size > 5 * 1024 * 1024)) { setErr('The permit must be an image under 5 MB.'); return }
+    if (ws) { const bad = checkFiles(docs); if (bad) { setErr(bad); return } }
     setBusy(true)
     const { data, error } = await supabase.auth.signUp({
       email: f.email, password: f.password,
@@ -43,13 +45,11 @@ export default function Signup() {
     })
     if (error) { setBusy(false); setErr(error.message); return }
     let note = ''
-    if (data.session && ws && permit) {
-      const path = data.user.id + '/license-' + Date.now() + '-' + permit.name.replace(/[^a-z0-9.]/gi, '_')
-      const up = await supabase.storage.from('wholesale-documents').upload(path, permit)
-      if (!up.error) await supabase.rpc('set_my_documents', { p_license: path, p_resale: null })
-      else note = ' Your permit photo could not be uploaded; you can add it later in My account.'
-    } else if (!data.session && ws && permit) {
-      note = ' After you confirm your email and log in, add your permit photo in My account.'
+    if (data.session && ws && docs.length) {
+      const r = await uploadDocs(data.user.id, docs)
+      if (r.failed) note = ' ' + r.failed + ' picture(s) could not be uploaded; you can add them again in My account.'
+    } else if (!data.session && ws && docs.length) {
+      note = ' After you confirm your email and log in, add your license and permit pictures in My account.'
     }
     setBusy(false)
     if (data.session) router.push('/account')
@@ -72,7 +72,7 @@ export default function Signup() {
         <label htmlFor="s">State your store is in</label>
         <select id="s" value={f.state} onChange={set('state')}><option value="">Choose a state</option>{STATES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
         <label htmlFor="t">Tax ID number (required)</label><input id="t" value={f.tax_id} onChange={set('tax_id')} />
-        <label htmlFor="pm">Photo of your permit (optional)</label><input id="pm" type="file" accept="image/*" onChange={(e) => setPermit(e.target.files[0] || null)} />
+        <DocPicker items={docs} onChange={setDocs} />
       </>}
       <label htmlFor="ph">Phone number</label><input id="ph" type="tel" required value={f.phone} onChange={set('phone')} />
       <label htmlFor="e">Email</label><input id="e" type="email" required value={f.email} onChange={set('email')} />

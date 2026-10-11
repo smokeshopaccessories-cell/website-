@@ -6,9 +6,11 @@ import { adminMessage } from '../../lib/support'
 
 const ST = ['requested', 'quoted', 'accepted', 'ready', 'shipped', 'completed', 'cancelled']
 
-function Order({ o, reload }) {
+function Order({ o, reload, saved }) {
   const ship = o.delivery === 'ups'
-  const [prices, setPrices] = useState(() => Object.fromEntries(o.order_items.map((i) => [i.id, i.unit_price])))
+  // A price you agreed earlier with this customer, if it applies to this quantity and is lower than today's price.
+  const sp = (i) => { const v = saved[o.customer_id + ':' + i.product_id]; return v && i.qty >= (v.min_qty || 1) && Number(v.price) < Number(i.unit_price) ? Number(v.price) : null }
+  const [prices, setPrices] = useState(() => Object.fromEntries(o.order_items.map((i) => [i.id, o.status === 'requested' && sp(i) != null ? sp(i) : i.unit_price])))
   const [ups, setUps] = useState(o.ups_total ?? '')
   const [note, setNote] = useState(o.quote_note || '')
   const [text, setText] = useState('')
@@ -61,6 +63,7 @@ function Order({ o, reload }) {
       {o.order_items.map((i) => (
         <div className={'ln' + (i.requested_price ? ' asked' : '')} key={i.id}>
           <span>{i.qty} × #{i.products?.item_number} {i.products?.name}<br /><small>List price {money(i.list_price ?? i.unit_price)} each</small>
+            {sp(i) != null && <><br /><b className="askb">Saved quote price {money(sp(i))} each</b> <small>(agreed earlier{o.status === 'requested' ? ', already filled in below' : ''})</small> <button className="rq" onClick={() => setPrices({ ...prices, [i.id]: sp(i) })}>Use saved price</button></>}
             {i.requested_price ? <><br /><b className="askb">Customer asks for {money(i.requested_price)} each</b>{i.customer_note ? <span> · “{i.customer_note}”</span> : null} <button className="rq" onClick={() => setPrices({ ...prices, [i.id]: i.requested_price })}>Use their price</button></> : null}
           </span>
           <span>$ <input style={{ width: 90, display: 'inline-block' }} type="number" step="0.01" value={prices[i.id]} onChange={(e) => setPrices({ ...prices, [i.id]: e.target.value })} aria-label="Final price each" disabled={['shipped', 'completed', 'cancelled'].includes(o.status)} /> each</span>
@@ -91,19 +94,27 @@ function Order({ o, reload }) {
 export default function Orders() {
   const [rows, setRows] = useState([])
   const [f, setF] = useState('requested')
+  const [saved, setSaved] = useState({})
   const load = async () => {
-    let q = supabase.from('orders').select('*, order_items(id,qty,unit_price,list_price,requested_price,customer_note,products(item_number,name)), profiles(full_name,business_name,email,phone)').order('id', { ascending: false }).limit(100)
+    let q = supabase.from('orders').select('*, order_items(id,product_id,qty,unit_price,list_price,requested_price,customer_note,products(item_number,name)), profiles(full_name,business_name,email,phone)').order('id', { ascending: false }).limit(100)
     if (f) q = q.eq('status', f)
     const { data } = await q
+    const ids = [...new Set((data || []).map((o) => o.customer_id))]
+    let map = {}
+    if (ids.length) {
+      const cp = await supabase.from('customer_prices').select('customer_id,product_id,price,min_qty').in('customer_id', ids)
+      map = Object.fromEntries((cp.data || []).map((r) => [r.customer_id + ':' + r.product_id, r]))
+    }
+    setSaved(map)
     setRows(data || [])
   }
   useEffect(() => { load() }, [f])
   return (
     <>
       <div className="fm"><div><select value={f} onChange={(e) => setF(e.target.value)} aria-label="Status"><option value="">All statuses</option>{ST.map((s) => <option key={s} value={s}>{s}</option>)}</select></div></div>
-      <p className="mute">Flow: customer sends a request, you set final prices{' '}and the shipping total and send the quote, the customer accepts, then you mark it ready and shipped or picked up. Accepted wholesale prices are saved for that customer.</p>
+      <p className="mute">Flow: customer sends a request, you set final prices{' '}and the shipping total and send the quote, the customer accepts, then you mark it ready and shipped or picked up. Prices you agree in Price quotes are saved for that customer and filled in here automatically.</p>
       {rows.length === 0 && <p className="mute">No orders with this status.</p>}
-      {rows.map((o) => <Order key={o.id + o.status + String(o.ups_total)} o={o} reload={load} />)}
+      {rows.map((o) => <Order key={o.id + o.status + String(o.ups_total)} o={o} reload={load} saved={saved} />)}
     </>
   )
 }

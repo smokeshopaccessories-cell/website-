@@ -28,3 +28,9 @@ paste link, or bulk by UPC), wholesale approvals, orders with UPS totals, deals,
 ## Not included yet
 Draft and publish for product edits (edits save immediately), emails to customers, a best-seller ranking from real sales,
 and the "save a copy" option for pasted image links.
+
+## Price quotes and license pictures (added)
+1. In Supabase open **SQL Editor > New query**, paste everything from `supabase/quotes-and-documents.sql`, and click **Run** (once; it only adds things).
+2. Upload the changed files to GitHub; Vercel redeploys on its own.
+3. Admin > **Price quotes** has three parts: the quotes themselves, **Rules** (how many pieces unlock the price box, by item price), and **Saved customer prices**.
+4. Admin > **Customers** has a **Price quoting** switch per customer. Wholesale is on by default, retail is off until you switch it on.

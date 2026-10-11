@@ -3,19 +3,22 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { addToCart, money } from '../lib/cart'
 import Modal from './Modal'
+import PriceLine from './PriceLine'
+import { useSavedPrices, priceFor } from '../lib/quotes'
 
 // Product pop-up with photo, details, quantity and add button.
 export default function QuickView({ p, user, profile, onClose }) {
   const router = useRouter()
   const [n, setN] = useState(1)
   const [added, setAdded] = useState(false)
+  const saved = useSavedPrices(user)
   const sold = p.status === 'sold'
   const pending = user && profile && profile.status !== 'approved'
   const max = p.qty_left || 999
 
   let price
   if (sold) price = <span className="sold">Sold</span>
-  else if (p.price != null) price = <span>{money(p.price)}</span>
+  else if (p.price != null) price = <PriceLine p={p} saved={saved} qty={n} />
   else price = <span className="lk">{pending ? 'Pending approval' : 'Log in to see price'}</span>
 
   function add() {
@@ -46,7 +49,7 @@ export default function QuickView({ p, user, profile, onClose }) {
               {p.qty_left ? <small className="mute"> You can request up to {p.qty_left}.</small> : null}
             </>
           )}
-          {p.price != null && !sold && user && <p className="qtot">Estimated total: <b>{money(p.price * n)}</b> <small className="mute">(final price confirmed by our team)</small></p>}
+          {p.price != null && !sold && user && <p className="qtot">Estimated total: <b>{money(priceFor(saved, p.id, p.price, n).price * n)}</b> <small className="mute">(final price confirmed by our team)</small></p>}
           <div className="row">
             <button className="btn f" disabled={sold} onClick={add}>{sold ? 'Sold' : !user ? 'Log in to order' : added ? 'Added ✓ Add more' : 'Add ' + n + ' to order request'}</button>
             {added && <button className="btn" onClick={() => router.push('/cart')}>View order request</button>}

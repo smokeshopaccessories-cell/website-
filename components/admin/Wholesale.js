@@ -2,13 +2,19 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { adminMessage } from '../../lib/support'
+import { DOC_TYPES } from '../../lib/docs'
 
 export default function Wholesale() {
   const [rows, setRows] = useState([])
   const [msg, setMsg] = useState('')
+  const [docs, setDocs] = useState({})
   const load = async () => {
     const { data } = await supabase.from('profiles').select('*').eq('role', 'wholesale').order('created_at', { ascending: false })
     setRows(data || [])
+    const d = await supabase.from('wholesale_documents').select('*').order('id')
+    const by = {}
+    ;(d.data || []).forEach((x) => { (by[x.customer_id] = by[x.customer_id] || []).push(x) })
+    setDocs(by)
   }
   useEffect(() => { load() }, [])
   async function setStatus(id, status) {
@@ -35,8 +41,10 @@ export default function Wholesale() {
           <p className="mute">{r.full_name} · {r.email} · {r.phone || 'no phone'}</p>
           <p><b>State:</b> {r.state || '—'} · <b>Tax ID:</b> {r.tax_id || '—'}</p>
           <div className="row" style={{ marginTop: 0 }}>
-            <button className="btn" disabled={!r.license_path} onClick={() => view(r.license_path)}>{r.license_path ? 'View business license' : 'No license uploaded'}</button>
-            <button className="btn" disabled={!r.resale_path} onClick={() => view(r.resale_path)}>{r.resale_path ? 'View resale certificate' : 'No certificate uploaded'}</button>
+            {(docs[r.id] || []).map((d, k) => <button key={d.id} className="btn" onClick={() => view(d.path)}>View {DOC_TYPES[d.doc_type] || 'document'} {k + 1}</button>)}
+            {r.license_path && !(docs[r.id] || []).some((d) => d.path === r.license_path) && <button className="btn" onClick={() => view(r.license_path)}>View business license</button>}
+            {r.resale_path && !(docs[r.id] || []).some((d) => d.path === r.resale_path) && <button className="btn" onClick={() => view(r.resale_path)}>View resale certificate</button>}
+            {!(docs[r.id] || []).length && !r.license_path && !r.resale_path && <span className="mute">No pictures uploaded</span>}
           </div>
           <div className="row">
             {r.status !== 'approved' && <button className="btn f" onClick={() => setStatus(r.id, 'approved')}>Approve</button>}

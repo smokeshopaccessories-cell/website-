@@ -7,6 +7,10 @@ import { money } from '../../lib/cart'
 import { NOTICES } from '../../lib/notices'
 import { STORE } from '../../lib/store'
 import Support from '../../components/Support'
+import DocPicker from '../../components/DocPicker'
+import { QuoteThread } from '../../components/QuoteBox'
+import { DOC_TYPES, checkFiles, uploadDocs } from '../../lib/docs'
+import { useMyQuotes, useSavedPrices } from '../../lib/quotes'
 
 const LABEL = { requested: 'Request received', quoted: 'Quote ready', accepted: 'Accepted', ready: 'Ready', shipped: 'Shipped', completed: 'Completed', cancelled: 'Cancelled' }
 
@@ -55,6 +59,18 @@ export default function Account() {
   const [orders, setOrders] = useState([])
   const [reqs, setReqs] = useState([])
   const [note, setNote] = useState('')
+  const [docs, setDocs] = useState([])
+  const [mine, setMine] = useState([])
+  const [busyDocs, setBusyDocs] = useState(false)
+  const { quotes, reload: reloadQuotes } = useMyQuotes(user)
+  const saved = useSavedPrices(user)
+  const [names, setNames] = useState({})
+
+  async function loadDocs() {
+    if (!user) return
+    const d = await supabase.from('wholesale_documents').select('*').eq('customer_id', user.id).order('id', { ascending: false })
+    setMine(d.data || [])
+  }
 
   async function load() {
     if (!user) return
@@ -63,15 +79,27 @@ export default function Account() {
     const r = await supabase.from('price_requests').select('*, products(name)').eq('customer_id', user.id).order('id', { ascending: false })
     setReqs(r.data || [])
   }
-  useEffect(() => { load() }, [user?.id])
+  useEffect(() => { load(); loadDocs() }, [user?.id])
+  useEffect(() => {
+    const ids = Object.keys(saved)
+    if (!ids.length) return
+    supabase.from('products').select('id,name').in('id', ids).then(({ data }) => setNames(Object.fromEntries((data || []).map((x) => [String(x.id), x.name]))))
+  }, [saved])
 
-  async function upload(kind, file) {
-    if (!file) return
-    const path = user.id + '/' + kind + '-' + Date.now() + '-' + file.name.replace(/[^a-z0-9.]/gi, '_')
-    const { error } = await supabase.storage.from('wholesale-documents').upload(path, file)
-    if (error) { setNote(error.message); return }
-    await supabase.rpc('set_my_documents', { p_license: kind === 'license' ? path : null, p_resale: kind === 'resale' ? path : null })
-    setNote('Uploaded. Our team will review your documents.')
+  async function uploadAll() {
+    const bad = checkFiles(docs)
+    if (bad) { setNote(bad); return }
+    setBusyDocs(true)
+    const r = await uploadDocs(user.id, docs)
+    setBusyDocs(false)
+    setNote(r.failed ? r.done + ' uploaded, ' + r.failed + ' failed. Please try the failed ones again.' : 'Uploaded. Our team will review your documents.')
+    if (r.done) setDocs([])
+    loadDocs()
+  }
+  async function removeDoc(d) {
+    await supabase.storage.from('wholesale-documents').remove([d.path])
+    await supabase.from('wholesale_documents').delete().eq('id', d.id)
+    loadDocs()
   }
 
   if (loading) return <p className="mute">Loading…</p>
@@ -80,19 +108,32 @@ export default function Account() {
   return (
     <>
       <div className="ph"><h1>My account</h1><p>{profile?.business_name || profile?.full_name} · {profile?.role} · <b>{profile?.status}</b></p></div>
-      {profile?.role === 'wholesale' && profile.status !== 'approved' && (
+      {profile?.role === 'wholesale' && (
         <div className="cd">
-          <h3>Wholesale approval</h3>
-          <p>We review each wholesale application. Add your permit photo to speed things up. You will see your prices after approval.</p>
-          <div className="fm">
-            <div><label htmlFor="l">Permit photo</label><input id="l" type="file" accept="image/*" onChange={(e) => upload('license', e.target.files[0])} /></div>
-          </div>
+          <h3>{profile.status !== 'approved' ? 'Wholesale approval' : 'License & permit pictures'}</h3>
+          {profile.status !== 'approved' && <p>We review each wholesale application. Add pictures of your licenses and permits to speed things up. You will see your prices after approval.</p>}
+          {mine.length > 0 && mine.map((d) => (
+            <div className="ln" key={d.id}><span><b>{DOC_TYPES[d.doc_type] || 'Other'}</b> · <small>{d.file_name}</small></span>{profile.status !== 'approved' && <button className="btn d" onClick={() => removeDoc(d)}>Remove</button>}</div>
+          ))}
+          <DocPicker items={docs} onChange={setDocs} />
+          {docs.length > 0 && <div className="row"><button className="btn f" disabled={busyDocs} onClick={uploadAll}>{busyDocs ? 'Uploading…' : 'Upload ' + docs.length + ' picture' + (docs.length > 1 ? 's' : '')}</button></div>}
           {note && <p className="note">{note}</p>}
         </div>
       )}
       <h2>Orders</h2>
       {orders.length === 0 && <p className="mute">No orders yet.</p>}
       {orders.map((o) => <Order key={o.id + o.status} o={o} reload={load} />)}
+      {(quotes.length > 0 || Object.keys(saved).length > 0) && <>
+        <h2 style={{ marginTop: 24 }}>My price quotes</h2>
+        {Object.keys(saved).length > 0 && (
+          <div className="cd">
+            <b>Your saved prices</b>
+            <p className="mute"><small>These prices were agreed with the store. They show on the product and in your order request on future orders.</small></p>
+            {Object.entries(saved).map(([pid, v]) => <div className="ln" key={pid}><span>{names[pid] || 'Item #' + pid}</span><b>{money(v.price)} each{v.min_qty > 1 ? ' · ' + v.min_qty + '+ pcs' : ''}</b></div>)}
+          </div>
+        )}
+        {quotes.filter((q) => q.status !== 'accepted').map((q) => <div className="cd" key={q.id + q.status}><QuoteThread q={q} reload={reloadQuotes} /></div>)}
+      </>}
       {reqs.length > 0 && <>
         <h2 style={{ marginTop: 24 }}>Price requests</h2>
         {reqs.map((r) => <div className="cd" key={r.id}><div className="ln"><b>{r.products?.name}</b><span className="tg">{r.status}</span></div>

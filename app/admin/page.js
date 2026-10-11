@@ -13,8 +13,9 @@ import Settings from '../../components/admin/Settings'
 import Banners from '../../components/admin/Banners'
 import Support from '../../components/admin/Support'
 import Security from '../../components/admin/Security'
+import Quotes from '../../components/admin/Quotes'
 
-const TABS = [['orders', 'Orders', Orders], ['support', 'Support', Support], ['products', 'Inventory', Products], ['wholesale', 'Wholesale requests', Wholesale], ['requests', 'Price requests', PriceRequests], ['deals', 'Deals', Deals], ['customers', 'Customers', Customers], ['banners', 'Banners & brands', Banners], ['settings', 'Shipping', Settings], ['security', 'Security', Security]]
+const TABS = [['orders', 'Orders', Orders], ['support', 'Support', Support], ['products', 'Inventory', Products], ['wholesale', 'Wholesale requests', Wholesale], ['quotes', 'Price quotes', Quotes], ['requests', 'Old price requests', PriceRequests], ['deals', 'Deals', Deals], ['customers', 'Customers', Customers], ['banners', 'Banners & brands', Banners], ['settings', 'Shipping', Settings], ['security', 'Security', Security]]
 
 export default function Admin() {
   const { user, profile, loading } = useAuth()
@@ -28,7 +29,8 @@ export default function Admin() {
       const a = await supabase.from('support_threads').select('id', { count: 'exact', head: true }).eq('admin_unread', true).eq('status', 'open')
       const b = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'requested')
       const c = await supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'wholesale').eq('status', 'pending')
-      setCounts({ support: a.count || 0, orders: b.count || 0, wholesale: c.count || 0 })
+      const d = await supabase.from('quotes').select('id', { count: 'exact', head: true }).in('status', ['pending', 'declined'])
+      setCounts({ support: a.count || 0, orders: b.count || 0, wholesale: c.count || 0, quotes: d.count || 0 })
     }
     f(); const t = setInterval(f, 30000)
     return () => clearInterval(t)

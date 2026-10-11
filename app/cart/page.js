@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/useAuth'
 import { getCart, saveCart, money } from '../../lib/cart'
 import { NOTICES } from '../../lib/notices'
+import { useQuoteAccess, useMyQuotes, useSavedPrices, minQtyFor, priceFor } from '../../lib/quotes'
+import QuoteBox from '../../components/QuoteBox'
 
 export default function Cart() {
   const { user, profile, loading } = useAuth()
@@ -16,16 +18,19 @@ export default function Cart() {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const access = useQuoteAccess(user, profile)
+  const { quotes, reload: reloadQuotes } = useMyQuotes(user)
+  const saved = useSavedPrices(user)
+
   useEffect(() => { setItems(getCart()) }, [])
   const change = (id, d) => {
     const c = getCart().map((i) => (i.id === id ? { ...i, qty: i.qty + d } : i)).filter((i) => i.qty > 0)
     saveCart(c); setItems(c)
   }
-  const setField = (id, k, v) => {
-    const c = getCart().map((i) => (i.id === id ? { ...i, [k]: v } : i))
-    saveCart(c); setItems(c)
-  }
-  const sub = items.reduce((s, i) => s + (i.price || 0) * i.qty, 0)
+  // The price shown for each line: the customer's saved quoted price when it applies, otherwise the list price.
+  const unit = (i) => priceFor(saved, i.id, i.price, i.qty)
+  const openQuote = (id) => quotes.find((q) => String(q.product_id) === String(id) && q.status !== 'accepted')
+  const sub = items.reduce((s, i) => s + (unit(i).price || 0) * i.qty, 0)
 
   async function place() {
     setErr('')
@@ -33,7 +38,7 @@ export default function Cart() {
     if (!ack) { setErr('Please tick the box to confirm the age, ID and no-returns notice.'); return }
     setBusy(true)
     const { data, error } = await supabase.rpc('place_order', {
-      items: items.map((i) => ({ product_id: i.id, qty: i.qty, requested_price: i.ask || '', note: i.note || '' })), p_delivery: delivery, p_address: address, p_ack: true,
+      items: items.map((i) => ({ product_id: i.id, qty: i.qty, requested_price: '', note: '' })), p_delivery: delivery, p_address: address, p_ack: true,
     })
     setBusy(false)
     if (error) { setErr(error.message); return }
@@ -48,29 +53,25 @@ export default function Cart() {
   return (
     <div className="card" style={{ maxWidth: 640 }}>
       <h2>Order request</h2>
-      <p className="note">There is no instant checkout. For any item you can ask for a lower price right here. Send your request, and our team replies with your <b>final prices{delivery === 'ups' ? ' and shipping total' : ''}</b>. You then accept the quote and we tell you when it is ready.</p>
+      <p className="note">There is no instant checkout. Send your request, and our team replies with your <b>final prices{delivery === 'ups' ? ' and shipping total' : ''}</b>. You then accept the quote and we tell you when it is ready.</p>
       {items.length === 0 && <p className="mute">Your order request is empty.</p>}
-      {items.map((i) => (
-        <div className="item" key={i.id}>
-          <div className="ln" style={{ border: 0 }}>
-            <span><b>{i.name}</b><br /><small>List price {money(i.price)} each. Our team confirms the final price.</small></span>
-            <span className="row" style={{ margin: 0 }}><button className="btn" onClick={() => change(i.id, -1)} aria-label="Less">−</button>{i.qty}<button className="btn" onClick={() => change(i.id, 1)} aria-label="More">+</button></span>
-          </div>
-          <div className="ask">
-            <div className="fm">
-              <div style={{ maxWidth: 190 }}>
-                <label htmlFor={'ask' + i.id}>Want a lower price? Your price each ($)</label>
-                <input id={'ask' + i.id} type="number" step="0.01" min="0" placeholder="Optional" value={i.ask || ''} onChange={(e) => setField(i.id, 'ask', e.target.value)} />
-              </div>
-              <div style={{ flex: 2 }}>
-                <label htmlFor={'note' + i.id}>Note for this item (optional)</label>
-                <input id={'note' + i.id} maxLength={300} placeholder="For example: I can get it for less elsewhere" value={i.note || ''} onChange={(e) => setField(i.id, 'note', e.target.value)} />
-              </div>
+      {items.map((i) => {
+        const u = unit(i)
+        const eligible = access.allowed && i.qty >= minQtyFor(access.rules, i.price)
+        return (
+          <div className="item" key={i.id}>
+            <div className="ln" style={{ border: 0 }}>
+              <span><b>{i.name}</b><br />
+                {u.saved
+                  ? <small><b>Your quoted price {money(u.price)} each</b> <s>{money(i.price)}</s>. Our team confirms the final price.</small>
+                  : <small>List price {money(i.price)} each. Our team confirms the final price.</small>}
+              </span>
+              <span className="row" style={{ margin: 0 }}><button className="btn" onClick={() => change(i.id, -1)} aria-label="Less">−</button>{i.qty}<button className="btn" onClick={() => change(i.id, 1)} aria-label="More">+</button></span>
             </div>
-            {i.ask && Number(i.ask) > 0 && <small className="mute">We will see you asked for {money(Number(i.ask))} each on this item.</small>}
+            <QuoteBox item={i} listPrice={u.price} quote={openQuote(i.id)} eligible={eligible} reload={reloadQuotes} />
           </div>
-        </div>
-      ))}
+        )
+      })}
       {items.length > 0 && (
         <>
           <div className="ln"><b>Estimated items total</b><b>{money(sub)}</b></div>
