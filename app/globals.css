@@ -28,10 +28,10 @@ input,select,textarea{padding:10px 14px;border:2px solid var(--ink);border-radiu
 .bar ul{list-style:none;margin:0 auto;padding:0 12px;max-width:1240px;display:flex;flex-wrap:wrap}
 .bar li{position:relative}
 .bar li>a{display:block;padding:11px 12px;color:#fff;font:400 14px 'Anton';letter-spacing:.07em;text-transform:uppercase}
-.bar li:hover>a,.bar li:focus-within>a{background:var(--lime);color:var(--ink)}
+.bar li:hover>a,.bar li:has(a:focus-visible)>a{background:var(--lime);color:var(--ink)}
 .bar li.hot>a{color:var(--lime)}.bar li.hot:hover>a{color:var(--ink)}
 .dd{display:none;position:absolute;left:0;top:100%;min-width:240px;max-height:70vh;overflow:auto;background:#fff;border:2px solid var(--ink);box-shadow:6px 6px 0 var(--gr);padding:8px;z-index:70}
-.bar li:hover .dd,.bar li:focus-within .dd{display:block}
+.bar li:hover .dd,.bar li:has(a:focus-visible) .dd{display:block}
 .bar li:nth-last-child(-n+4) .dd{left:auto;right:0}
 .dd b{display:block;font:400 12px 'Anton';letter-spacing:.12em;color:var(--mute);padding:4px 10px}
 .dd a{display:block;padding:8px 10px;border-radius:6px;color:var(--ink)}.dd a:hover{background:var(--lime)}
@@ -104,7 +104,6 @@ th{font:400 13px 'Anton';letter-spacing:.08em;text-transform:uppercase;backgroun
 .ln{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--soft)}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;z-index:80;overflow:auto}.ov.c{align-items:center;justify-content:center;padding:20px}
 .md{background:#fff;border:3px solid var(--ink);border-radius:14px;padding:26px;width:min(520px,100%);max-height:94vh;overflow:auto;box-shadow:var(--sh2)}.md.big{width:min(820px,100%)}
-.qvg{display:grid;grid-template-columns:1fr 1fr;gap:22px}.qvg img{width:100%;border:2px solid var(--ink);border-radius:10px;background:#fff;object-fit:contain;aspect-ratio:1}.qvg .ph0{aspect-ratio:1;background:var(--paper);border:2px solid var(--ink);border-radius:10px;display:grid;place-items:center;color:var(--mute)}
 .dz{border:2px dashed var(--ink);border-radius:10px;min-height:120px;display:grid;place-items:center;text-align:center;padding:12px;cursor:pointer;color:var(--mute)}.dz.on{background:var(--lime)}.dz img{max-width:100%;max-height:160px;border-radius:8px}
 .gate{position:fixed;inset:0;background:var(--lime);background-image:repeating-linear-gradient(135deg,#0d0d0d12 0 2px,transparent 2px 14px);display:grid;place-items:center;z-index:90;padding:20px}
 .gate .bx{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:34px;max-width:430px;text-align:center;box-shadow:var(--sh2)}
@@ -140,3 +139,17 @@ footer{background:var(--ink);color:#d8d8cc;margin-top:56px;border-top:6px solid 
 .bulkbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:sticky;top:112px;z-index:20;background:var(--lime);border:2px solid var(--ink);border-radius:10px;padding:10px 12px;margin:12px 0;box-shadow:var(--sh)}
 .bulkbar .btn{padding:6px 12px;box-shadow:2px 2px 0 var(--ink)}
 tr.selrow td{background:#f4ffd6}
+.ov.fade{animation:fadeIn .18s ease}.md.pop{animation:popIn .22s cubic-bezier(.2,.9,.3,1.15);position:relative;outline:none}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.xbtn{position:absolute;right:12px;top:10px;width:38px;height:38px;border:2px solid var(--ink);border-radius:8px;background:#fff;font:400 26px/1 'Anton';box-shadow:2px 2px 0 var(--ink);z-index:2}
+.xbtn:hover{background:var(--lime)}
+.qvg{display:grid;grid-template-columns:1.05fr 1fr;gap:26px;align-items:start}
+.qimg img,.qimg .ph0{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;border:2px solid var(--ink);border-radius:12px;display:grid;place-items:center;color:var(--mute)}
+.qinfo h2{font-size:clamp(26px,3.4vw,40px);padding-right:44px}
+.qprice{font:400 36px 'Anton';margin:10px 0}
+.stepper{display:inline-flex;align-items:center;border:2px solid var(--ink);border-radius:8px;overflow:hidden;box-shadow:3px 3px 0 var(--ink)}
+.stepper button{width:44px;height:44px;border:0;background:var(--lime);font:400 24px 'Anton'}.stepper button:hover{background:var(--ink);color:var(--lime)}
+.stepper input{width:70px;height:44px;border:0;border-left:2px solid var(--ink);border-right:2px solid var(--ink);border-radius:0;text-align:center;font-weight:700;padding:0}
+.qtot{margin:12px 0 0}
+@media(max-width:700px){.qvg{grid-template-columns:1fr}.md.big{padding:16px}}
+@media(prefers-reduced-motion:reduce){.ov.fade,.md.pop{animation:none}}
