@@ -6,7 +6,7 @@ import { useAuth } from '../lib/useAuth'
 import { STORE } from '../lib/store'
 import ProductCard from '../components/ProductCard'
 import BannerSlider from '../components/BannerSlider'
-import Scroller from '../components/Scroller'
+import Showcase from '../components/Showcase'
 
 export default function Home() {
   const { user, profile } = useAuth()
@@ -24,15 +24,13 @@ export default function Home() {
   }, [])
   useEffect(() => {
     supabase.rpc('deal_items').then(({ data }) => setDeals(data || []))
-    supabase.rpc('catalog', { p_limit: 12, p_offset: 0 }).then(({ data }) => setFeatured((data || []).filter((p) => p.status !== 'sold')))
+    supabase.rpc('catalog', { p_limit: 16, p_offset: 0 }).then(({ data }) => setFeatured((data || []).filter((p) => p.status !== 'sold')))
   }, [user?.id])
   useEffect(() => {
-    brands.slice(0, 3).forEach((b) => {
-      supabase.rpc('catalog', { p_brand: b.brand, p_limit: 10, p_offset: 0 }).then(({ data }) => setRows((r) => ({ ...r, [b.brand]: (data || []).filter((p) => p.status !== 'sold') })))
+    brands.slice(0, 4).forEach((b) => {
+      supabase.rpc('catalog', { p_brand: b.brand, p_limit: 16, p_offset: 0 }).then(({ data }) => setRows((r) => ({ ...r, [b.brand]: (data || []).filter((p) => p.status !== 'sold') })))
     })
   }, [brands, user?.id])
-
-  const card = (p) => <ProductCard key={p.id} p={p} user={user} profile={profile} />
 
   return (
     <>
@@ -48,21 +46,20 @@ export default function Home() {
         </div>
       )}
 
-      {deals.length > 0 && (
-        <div className="deals" id="deals">
-          <div className="hd"><h2>Deals right now</h2></div>
-          <Scroller>{deals.map(card)}</Scroller>
-        </div>
-      )}
+      <div id="deals" />
+      {deals.length >= 3
+        ? <Showcase title="Deals right now" products={deals} variant="deal" />
+        : deals.length > 0 && (
+          <div className="deals">
+            <div className="hd"><h2>Deals right now</h2></div>
+            <div className="grid">{deals.map((p) => <ProductCard key={p.id} p={p} user={user} profile={profile} />)}</div>
+          </div>
+        )}
 
-      <div className="hd"><h2>Best sellers</h2></div>
-      <Scroller>{featured.map(card)}</Scroller>
+      <Showcase title="Best sellers" products={featured} />
 
-      {brands.slice(0, 3).map((b) => (rows[b.brand] || []).length > 0 && (
-        <div key={b.brand}>
-          <div className="hd"><h2>{b.brand}</h2><Link href={'/search?q=' + encodeURIComponent(b.brand)}>View all</Link></div>
-          <Scroller>{rows[b.brand].map(card)}</Scroller>
-        </div>
+      {brands.slice(0, 4).map((b) => (
+        <Showcase key={b.brand} title={b.brand} products={rows[b.brand] || []} link={'/search?q=' + encodeURIComponent(b.brand)} />
       ))}
 
       <div className="hd"><h2>Shop by category</h2></div>
